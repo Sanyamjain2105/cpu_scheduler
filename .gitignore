@@ -36,3 +36,4 @@ vcpkg_installed/ # vcpkg installed packages
 # Operating System specific files
 .DS_Store # macOS directory configuration
 Thumbs.db # Windows thumbnail cache
+src/cpu_scheduler.exe
