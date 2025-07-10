@@ -1,0 +1,38 @@
+# Build artifacts
+*.o       # Object files
+*.obj     # Object files (Windows)
+*.exe     # Executables (Windows)
+*.out     # Executables (Linux/macOS)
+*.dll     # Dynamic Link Libraries (Windows)
+*.lib     # Static Libraries (Windows)
+*.so      # Shared Objects (Linux)
+*.dylib   # Dynamic Libraries (macOS)
+*.a       # Static Libraries (Linux/macOS)
+build/    # Common build output directory
+
+# IDE-specific files (e.g., Visual Studio, VS Code, CLion)
+.vs/      # Visual Studio hidden directory
+*.suo     # Visual Studio Solution User Options
+*.user    # Visual Studio User Options
+*.log     # Log files
+*.ncb     # Visual Studio IntelliSense/Browse information
+*.sdf     # Visual Studio SQL Server Compact Edition database
+*.opendb  # Visual Studio Open Database
+*.VC.db   # Visual Studio database files
+*.VC.VC.opendb # Visual Studio database files
+.vscode/  # VS Code configuration directory
+cmake-build-*/ # CLion build directories
+
+# Temporary files
+*~        # Backup files created by some editors
+*.tmp     # Temporary files
+*.swp     # Vim swap files
+*.bak     # Backup files
+
+# Dependency management (e.g., Conan, vcpkg)
+conan_deps/ # Conan dependencies directory
+vcpkg_installed/ # vcpkg installed packages
+
+# Operating System specific files
+.DS_Store # macOS directory configuration
+Thumbs.db # Windows thumbnail cache
