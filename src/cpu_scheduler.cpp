@@ -83,23 +83,25 @@ public:
     }
 
     // SJF Non-Preemptive
+    // Time Complexity: O(n log n)
     void runSJF_NP() {
         resetProcesses();
         vector<Process> plist = processes;
         int n = plist.size(), completed = 0, time = 0, prev_pid = -1;
         vector<bool> done(n, false);
 
+        // Min-heap: {burst, index}
+        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
+
         while (completed < n) {
-            int idx = -1, min_burst = INT_MAX;
-            for (int i = 0; i < n; ++i) {
-                if (!done[i] && plist[i].arrival <= time && plist[i].burst < min_burst) {
-                    min_burst = plist[i].burst;
-                    idx = i;
-                }
-            }
-            if (idx == -1) {
-                time++; continue;
-            }
+            // Push all arrived and not-done processes to heap
+            for (int i = 0; i < n; ++i)
+                if (!done[i] && plist[i].arrival <= time)
+                    pq.push({plist[i].burst, i}), done[i] = true; // Mark as pushed
+
+            if (pq.empty()) { time++; continue; }
+
+            auto [burst, idx] = pq.top(); pq.pop();
             if (prev_pid != -1 && prev_pid != plist[idx].pid)
                 time += context_switch_overhead;
             plist[idx].start_time = time;
@@ -108,66 +110,75 @@ public:
             plist[idx].completion = time;
             plist[idx].turnaround = plist[idx].completion - plist[idx].arrival;
             plist[idx].waiting = plist[idx].turnaround - plist[idx].burst;
-            done[idx] = true;
-            completed++;
             gantt.push_back({plist[idx].pid, plist[idx].start_time, plist[idx].completion, prev_pid != -1 && prev_pid != plist[idx].pid});
             prev_pid = plist[idx].pid;
+            completed++;
         }
         printResults("SJF (NP)", plist);
     }
 
-    // SJF Preemptive (SRTF)
+
+    // SJF Preemptive
+    // Time Complexity: O(B log n) where B = total burst time
     void runSJF_P() {
         resetProcesses();
         vector<Process> plist = processes;
         int n = plist.size(), completed = 0, time = 0, prev_pid = -1;
-        vector<bool> done(n, false);
+        vector<bool> in_heap(n, false);
+
+        // Min-heap: {burst_remain, arrival, index}
+        priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<tuple<int, int, int>>> pq;
 
         while (completed < n) {
-            int idx = -1, min_burst = INT_MAX;
-            for (int i = 0; i < n; ++i) {
-                if (!done[i] && plist[i].arrival <= time && plist[i].burst_remain < min_burst && plist[i].burst_remain > 0) {
-                    min_burst = plist[i].burst_remain;
-                    idx = i;
-                }
-            }
-            if (idx == -1) { time++; continue; }
+            for (int i = 0; i < n; ++i)
+                if (!in_heap[i] && plist[i].arrival <= time && plist[i].burst_remain > 0)
+                    pq.push({plist[i].burst_remain, plist[i].arrival, i}), in_heap[i] = true;
+
+            if (pq.empty()) { time++; continue; }
+
+            auto [burst_remain, arrival, idx] = pq.top(); pq.pop();
             if (prev_pid != -1 && prev_pid != plist[idx].pid)
                 time += context_switch_overhead;
             if (plist[idx].start_time == -1)
                 plist[idx].start_time = time, plist[idx].response = time - plist[idx].arrival;
-            int next_time = time + 1;
+
+            // Run for one unit (preemptive)
+            gantt.push_back({plist[idx].pid, time, time + 1, prev_pid != -1 && prev_pid != plist[idx].pid});
             plist[idx].burst_remain--;
+            time++;
             if (plist[idx].burst_remain == 0) {
-                plist[idx].completion = next_time;
+                plist[idx].completion = time;
                 plist[idx].turnaround = plist[idx].completion - plist[idx].arrival;
                 plist[idx].waiting = plist[idx].turnaround - plist[idx].burst;
-                done[idx] = true;
                 completed++;
+            } else {
+                pq.push({plist[idx].burst_remain, plist[idx].arrival, idx});
             }
-            gantt.push_back({plist[idx].pid, time, next_time, prev_pid != -1 && prev_pid != plist[idx].pid});
             prev_pid = plist[idx].pid;
-            time = next_time;
         }
         printResults("SJF (P)", plist);
     }
 
-    // Priority Non-Preemptive
+
+        // Priority Non-Preemptive
+    // Time Complexity: O(n log n)
     void runPriority_NP() {
         resetProcesses();
         vector<Process> plist = processes;
         int n = plist.size(), completed = 0, time = 0, prev_pid = -1;
         vector<bool> done(n, false);
 
+        // Min-heap: {priority, arrival, index}
+        priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<tuple<int, int, int>>> pq;
+
         while (completed < n) {
-            int idx = -1, min_pri = INT_MAX;
-            for (int i = 0; i < n; ++i) {
-                if (!done[i] && plist[i].arrival <= time && plist[i].priority < min_pri) {
-                    min_pri = plist[i].priority;
-                    idx = i;
-                }
-            }
-            if (idx == -1) { time++; continue; }
+            for (int i = 0; i < n; ++i)
+                if (!done[i] && plist[i].arrival <= time)
+                    pq.push({plist[i].priority, plist[i].arrival, i}), done[i] = true;
+
+            if (pq.empty()) { time++; continue; }
+
+            auto [priority, arrival, idx] = pq.top(); pq.pop();
             if (prev_pid != -1 && prev_pid != plist[idx].pid)
                 time += context_switch_overhead;
             plist[idx].start_time = time;
@@ -176,49 +187,56 @@ public:
             plist[idx].completion = time;
             plist[idx].turnaround = plist[idx].completion - plist[idx].arrival;
             plist[idx].waiting = plist[idx].turnaround - plist[idx].burst;
-            done[idx] = true;
-            completed++;
             gantt.push_back({plist[idx].pid, plist[idx].start_time, plist[idx].completion, prev_pid != -1 && prev_pid != plist[idx].pid});
             prev_pid = plist[idx].pid;
+            completed++;
         }
         printResults("Priority (NP)", plist);
     }
 
-    // Priority Preemptive
+
+    // Priority Preemptive 
+    // Time Complexity: O(B log n)
     void runPriority_P() {
         resetProcesses();
         vector<Process> plist = processes;
         int n = plist.size(), completed = 0, time = 0, prev_pid = -1;
-        vector<bool> done(n, false);
+        vector<bool> in_heap(n, false);
+
+        // Min-heap: {priority, arrival, index}
+        priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<tuple<int, int, int>>> pq;
 
         while (completed < n) {
-            int idx = -1, min_pri = INT_MAX;
-            for (int i = 0; i < n; ++i) {
-                if (!done[i] && plist[i].arrival <= time && plist[i].priority < min_pri && plist[i].burst_remain > 0) {
-                    min_pri = plist[i].priority;
-                    idx = i;
-                }
-            }
-            if (idx == -1) { time++; continue; }
+            for (int i = 0; i < n; ++i)
+                if (!in_heap[i] && plist[i].arrival <= time && plist[i].burst_remain > 0)
+                    pq.push({plist[i].priority, plist[i].arrival, i}), in_heap[i] = true;
+
+            if (pq.empty()) { time++; continue; }
+
+            auto [priority, arrival, idx] = pq.top(); pq.pop();
             if (prev_pid != -1 && prev_pid != plist[idx].pid)
                 time += context_switch_overhead;
             if (plist[idx].start_time == -1)
                 plist[idx].start_time = time, plist[idx].response = time - plist[idx].arrival;
-            int next_time = time + 1;
+
+            // Run for one unit (preemptive)
+            gantt.push_back({plist[idx].pid, time, time + 1, prev_pid != -1 && prev_pid != plist[idx].pid});
             plist[idx].burst_remain--;
+            time++;
             if (plist[idx].burst_remain == 0) {
-                plist[idx].completion = next_time;
+                plist[idx].completion = time;
                 plist[idx].turnaround = plist[idx].completion - plist[idx].arrival;
                 plist[idx].waiting = plist[idx].turnaround - plist[idx].burst;
-                done[idx] = true;
                 completed++;
+            } else {
+                pq.push({plist[idx].priority, plist[idx].arrival, idx});
             }
-            gantt.push_back({plist[idx].pid, time, next_time, prev_pid != -1 && prev_pid != plist[idx].pid});
             prev_pid = plist[idx].pid;
-            time = next_time;
         }
         printResults("Priority (P)", plist);
     }
+        
+
 
     // Round Robin
     void runRR(int quantum) {
